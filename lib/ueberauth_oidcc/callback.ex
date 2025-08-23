@@ -8,6 +8,7 @@ defmodule UeberauthOidcc.Callback do
   import UeberauthOidcc.Helpers
 
   import Ueberauth.Strategy.Helpers, only: [callback_path: 1, callback_url: 1]
+  import Plug.Conn, except: [request_url: 1]
 
   @doc """
   Support implementation of `c:Ueberauth.Strategy.handle_callback!/1`
