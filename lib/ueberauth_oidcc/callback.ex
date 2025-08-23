@@ -117,7 +117,6 @@ defmodule UeberauthOidcc.Callback do
       query: parsed_uri.query,
       scheme: scheme
     }
-    |> IO.inspect()
     |> to_string()
   end
 
