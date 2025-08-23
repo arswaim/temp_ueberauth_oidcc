@@ -152,6 +152,9 @@ defmodule UeberauthOidcc.Callback do
   defp normalize_port(scheme, nil), do: URI.default_port(scheme)
   defp normalize_port(_, port), do: String.to_integer(port)
 
+  defp encode_query([]), do: nil
+  defp encode_query(query_params), do: URI.encode_query(query_params)
+
   defp claims_from_params(%{"code" => _code} = params, client_context, _opts) do
     case validate_iss_param(Map.get(params, "iss"), client_context) do
       :ok ->
