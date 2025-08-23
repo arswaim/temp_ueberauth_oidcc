@@ -102,7 +102,7 @@ defmodule UeberauthOidcc.Callback do
 
     authority = get_host_header(conn) || parsed_uri.authority
 
-    port = get_req_header("x-forwarded-port") || parsed_uri.port
+    port = get_req_header(conn, "x-forwarded-port") || parsed_uri.port
 
     %URI{parsed_uri | scheme: scheme, authority: authority, port: port} |> to_string()
   end
