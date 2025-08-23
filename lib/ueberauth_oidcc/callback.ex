@@ -66,10 +66,12 @@ defmodule UeberauthOidcc.Callback do
 
     IO.puts("Full URL would be:")
     IO.inspect(apply_forwarded_headers_to_url(Map.get(session, :redirect_uri, :any), conn))
-    forwarded_redirect_uri = apply_forwarded_headers_to_url(Map.get(session, :redirect_uri, :any), conn)
+
+    forwarded_redirect_uri =
+      apply_forwarded_headers_to_url(Map.get(session, :redirect_uri, :any), conn)
 
     with :ok <- validate_response_mode(Map.get(session, :response_mode, :any), conn),
-        #  :ok <- validate_redirect_uri(Map.get(session, :redirect_uri, :any), conn),
+         #  :ok <- validate_redirect_uri(Map.get(session, :redirect_uri, :any), conn),
          :ok <- validate_redirect_uri(forwarded_redirect_uri, conn),
          :ok <- validate_issuer(Map.get(session, :issuer, :any), opts.issuer),
          {:ok, client_context, opts} <- client_context(opts, provider_overrides),
@@ -287,7 +289,7 @@ defmodule UeberauthOidcc.Callback do
     IO.inspect(uri, label: "the url we're comparing to")
     IO.inspect(Plug.Conn.request_url(%{conn | query_string: ""}), label: "the conn url")
 
-    case Plug.Conn.request_url(%{conn | query_string: ""}) do
+    case apply_forwarded_headers_to_url(Plug.Conn.request_url(%{conn | query_string: ""}), conn) do
       ^uri ->
         :ok
 
