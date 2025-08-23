@@ -98,6 +98,7 @@ defmodule UeberauthOidcc.Callback do
       cond do
         scheme = get_forwarded_proto_header(conn) -> scheme
         true -> parsed_uri.scheme
+      end
 
     authority = get_host_header(conn) || parsed_uri.authority
 
