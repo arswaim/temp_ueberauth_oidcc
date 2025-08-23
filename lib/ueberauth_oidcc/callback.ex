@@ -125,6 +125,29 @@ defmodule UeberauthOidcc.Callback do
     |> to_string() |> IO.inspect(label: "the full forwarded_url url")
   end
 
+  defp get_forwarded_proto_header(conn) do
+    IO.puts("Trying to get the x-forwarded-proto")
+    conn
+    |> get_req_header("x-forwarded-proto")
+    |> IO.inspect(label: "x-forwarded-proto from the conn")
+    |> List.first()
+  end
+
+  defp get_host_header(conn) do
+    IO.puts("Trying to get x-forwarded-host")
+    case get_req_header(conn, "x-forwarded-host") do
+      [] ->
+        get_req_header(conn, "host")
+        |> List.first()
+
+      [host | rest] ->
+        IO.puts("got a host to forward to")
+        IO.inspect(host, label: "host is")
+        IO.inspect(rest, label: "other hosts were")
+        host
+    end
+  end
+
   defp claims_from_params(%{"code" => _code} = params, client_context, _opts) do
     case validate_iss_param(Map.get(params, "iss"), client_context) do
       :ok ->
