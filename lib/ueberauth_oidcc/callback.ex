@@ -95,12 +95,12 @@ defmodule UeberauthOidcc.Callback do
   defp apply_forwarded_headers_to_url(uri, conn) do
     parsed_uri = URI.parse(uri)
 
-    authority = get_host_header(conn) || parsed_uri.authority
+    host = get_host_header(conn) || parsed_uri.host
 
-    [authority, uri_port] =
-      if String.contains?(authority, ":"),
-        do: String.split(authority, ":"),
-        else: [authority, to_string(parsed_uri.port)]
+    [host, uri_port] =
+      if String.contains?(host, ":"),
+        do: String.split(host, ":"),
+        else: [host, to_string(parsed_uri.port)]
 
     port = get_req_header(conn, "x-forwarded-port") || uri_port
 
@@ -110,7 +110,7 @@ defmodule UeberauthOidcc.Callback do
         true -> parsed_uri.scheme
       end
 
-    %URI{parsed_uri | scheme: scheme, authority: authority, port: port} |> to_string()
+    %URI{parsed_uri | scheme: scheme, host: host, port: port} |> to_string()
   end
 
   defp get_forwarded_proto_header(conn) do
