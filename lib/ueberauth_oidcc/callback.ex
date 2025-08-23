@@ -100,9 +100,9 @@ defmodule UeberauthOidcc.Callback do
     [host, uri_port] =
       if String.contains?(host, ":"),
         do: String.split(host, ":"),
-        else: [host, to_string(parsed_uri.port)]
+        else: [host, parsed_uri.port]
 
-    port = get_req_header(conn, "x-forwarded-port") || uri_port
+    port = get_forwarded_port_header(conn) || uri_port
 
     scheme =
       cond do
@@ -110,7 +110,22 @@ defmodule UeberauthOidcc.Callback do
         true -> parsed_uri.scheme
       end
 
-    %URI{parsed_uri | scheme: scheme, host: host, port: port} |> to_string()
+    %URI{
+      host: host,
+      port: port,
+      path: parsed_uri.path,
+      query: parsed_uri.query,
+      scheme: scheme
+    }
+    |> IO.inspect()
+    |> to_string()
+  end
+
+  defp get_forwarded_port_header(conn) do
+    conn
+    |> get_req_header("x-forwarded-port")
+    |> List.first()
+    |> String.to_integer()
   end
 
   defp get_forwarded_proto_header(conn) do
