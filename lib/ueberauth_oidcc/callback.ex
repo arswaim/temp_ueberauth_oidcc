@@ -34,6 +34,8 @@ defmodule UeberauthOidcc.Callback do
       |> Map.put_new(:callback_path, callback_path(conn))
       |> Map.put_new(:redirect_uri, callback_url(conn))
 
+    IO.inspect(opts, label: "oidc handle_callback opts")
+
     session = Session.get(conn, opts)
     conn = Session.delete(conn, opts)
 
