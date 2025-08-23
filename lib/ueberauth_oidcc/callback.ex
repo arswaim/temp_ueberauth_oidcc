@@ -62,6 +62,8 @@ defmodule UeberauthOidcc.Callback do
 
     provider_overrides = Map.take(opts, [:token_endpoint])
 
+    IO.inspect("Full URL would be: %{forwarded_url(conn, opts)}")
+
     with :ok <- validate_response_mode(Map.get(session, :response_mode, :any), conn),
          :ok <- validate_redirect_uri(Map.get(session, :redirect_uri, :any), conn),
          :ok <- validate_issuer(Map.get(session, :issuer, :any), opts.issuer),
@@ -85,6 +87,42 @@ defmodule UeberauthOidcc.Callback do
       {:error, reason} ->
         {:error, reason}
     end
+  end
+
+  defp forwarded_url(conn, opts) do
+    IO.puts("In forwarded_url")
+    scheme =
+      cond do
+        scheme = Keyword.get(opts, :scheme) -> scheme |> IO.inspect(label: "scheme from opts")
+        scheme = get_forwarded_proto_header(conn) -> scheme |> IO.inspect(label: "scheme from x-forwarded-proto header")
+        true -> to_string(conn.scheme) |> IO.inspect(label: "scheme from conn")
+      end
+    IO.inspect(scheme, label: "And the scheme is")
+
+    host = get_host_header(conn) || conn.host
+
+    [host, port] =
+      if String.contains?(host, ":"),
+        do: String.split(host, ":"),
+        else: [host, to_string(conn.port)]
+
+    port = Keyword.get(opts, :port) || normalize_port(scheme, port)
+
+    path = Keyword.fetch!(opts, :path)
+
+    query =
+      opts
+      |> Keyword.get(:query_params, [])
+      |> encode_query()
+
+    %URI{
+      host: host,
+      port: port,
+      path: path,
+      query: query,
+      scheme: scheme
+    }
+    |> to_string() |> IO.inspect(label: "the full forwarded_url url")
   end
 
   defp claims_from_params(%{"code" => _code} = params, client_context, _opts) do
