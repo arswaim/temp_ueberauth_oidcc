@@ -64,7 +64,7 @@ defmodule UeberauthOidcc.Callback do
     provider_overrides = Map.take(opts, [:token_endpoint])
 
     IO.puts("Full URL would be:")
-    IO.inspect(forwarded_url(conn, opts))
+    IO.inspect(apply_forwarded_headers_to_url(Map.get(session, :redirect_uri, :any), conn))
 
     with :ok <- validate_response_mode(Map.get(session, :response_mode, :any), conn),
          :ok <- validate_redirect_uri(Map.get(session, :redirect_uri, :any), conn),
@@ -91,47 +91,26 @@ defmodule UeberauthOidcc.Callback do
     end
   end
 
-  defp forwarded_url(conn, opts) do
-    IO.puts("In forwarded_url")
+  defp apply_forwarded_headers_to_url(uri, conn) do
+    parsed_uri = URI.parse(uri)
+
     scheme =
       cond do
-        scheme = Keyword.get(opts, :scheme) -> scheme |> IO.inspect(label: "scheme from opts")
-        scheme = get_forwarded_proto_header(conn) -> scheme |> IO.inspect(label: "scheme from x-forwarded-proto header")
-        true -> to_string(conn.scheme) |> IO.inspect(label: "scheme from conn")
-      end
-    IO.inspect(scheme, label: "And the scheme is")
+        scheme = get_forwarded_proto_header(conn) -> scheme
+        true -> parsed_uri.scheme
 
-    host = get_host_header(conn) || conn.host
+    authority = get_host_header(conn) || parsed_uri.authority
 
-    [host, port] =
-      if String.contains?(host, ":"),
-        do: String.split(host, ":"),
-        else: [host, to_string(conn.port)]
+    port = get_req_header("x-forwarded-port") || parsed_uri.port
 
-    port = Keyword.get(opts, :port) || normalize_port(scheme, port)
-
-    path = Keyword.fetch!(opts, :path)
-
-    query =
-      opts
-      |> Keyword.get(:query_params, [])
-      |> encode_query()
-
-    %URI{
-      host: host,
-      port: port,
-      path: path,
-      query: query,
-      scheme: scheme
-    }
-    |> to_string() |> IO.inspect(label: "the full forwarded_url url")
+    %URI{parsed_uri | scheme: scheme, authority: authority, port: port} |> to_string()
   end
 
   defp get_forwarded_proto_header(conn) do
     IO.puts("Trying to get the x-forwarded-proto")
     conn
     |> get_req_header("x-forwarded-proto")
-    |> IO.inspect(label: "x-forwarded-proto from the conn")
+    |> IO.inspect(label: "x-forwarded-proto from the conn (oidcc)")
     |> List.first()
   end
 
@@ -142,17 +121,10 @@ defmodule UeberauthOidcc.Callback do
         get_req_header(conn, "host")
         |> List.first()
 
-      [host | rest] ->
-        IO.puts("got a host to forward to")
-        IO.inspect(host, label: "host is")
-        IO.inspect(rest, label: "other hosts were")
+      [host | _] ->
         host
     end
   end
-
-  defp normalize_port(scheme, "80"), do: URI.default_port(scheme)
-  defp normalize_port(scheme, nil), do: URI.default_port(scheme)
-  defp normalize_port(_, port), do: String.to_integer(port)
 
   defp encode_query([]), do: nil
   defp encode_query(query_params), do: URI.encode_query(query_params)
