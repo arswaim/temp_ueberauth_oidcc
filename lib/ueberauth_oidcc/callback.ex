@@ -284,6 +284,9 @@ defmodule UeberauthOidcc.Callback do
     # generate the current URL but without the query string parameters
     IO.inspect(conn, label: "the conn in validate_redirect_uri")
 
+    IO.inspect(uri, label: "the url we're comparing to")
+    IO.inspect(Plug.Conn.request_url(%{conn | query_string: ""}), label: "the conn url")
+
     case Plug.Conn.request_url(%{conn | query_string: ""}) do
       ^uri ->
         :ok
