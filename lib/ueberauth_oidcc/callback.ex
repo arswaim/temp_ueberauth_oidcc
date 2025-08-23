@@ -27,6 +27,7 @@ defmodule UeberauthOidcc.Callback do
            }}
           | {:error, Plug.Conn.t(), term}
   def handle_callback(opts, conn) do
+    IO.inspect(opts, label: "oidcc handle_callback opts")
     opts =
       Config.default()
       |> Map.merge(Map.new(opts))
@@ -218,11 +219,13 @@ defmodule UeberauthOidcc.Callback do
 
   defp validate_redirect_uri(uri, conn) do
     # generate the current URL but without the query string parameters
+    IO.inspect(conn, label: "the conn in validate_redirect_uri")
     case Plug.Conn.request_url(%{conn | query_string: ""}) do
       ^uri ->
         :ok
 
       actual_uri ->
+        IO.puts("Validating the redirect URI failed.")
         {:error, {:invalid_redirect_uri, actual_uri}}
     end
   end
