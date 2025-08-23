@@ -63,7 +63,8 @@ defmodule UeberauthOidcc.Callback do
 
     provider_overrides = Map.take(opts, [:token_endpoint])
 
-    IO.puts("Full URL would be: %{inspect forwarded_url(conn, opts)}")
+    IO.puts("Full URL would be:")
+    IO.inspect(forwarded_url(conn, opts))
 
     with :ok <- validate_response_mode(Map.get(session, :response_mode, :any), conn),
          :ok <- validate_redirect_uri(Map.get(session, :redirect_uri, :any), conn),
