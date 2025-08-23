@@ -102,7 +102,7 @@ defmodule UeberauthOidcc.Callback do
         do: String.split(host, ":"),
         else: [host, parsed_uri.port]
 
-    port = get_forwarded_port_header(conn) || uri_port
+    port = String.to_integer(get_forwarded_port_header(conn) || uri_port)
 
     scheme =
       cond do
@@ -125,7 +125,8 @@ defmodule UeberauthOidcc.Callback do
     conn
     |> get_req_header("x-forwarded-port")
     |> List.first()
-    |> String.to_integer()
+
+
   end
 
   defp get_forwarded_proto_header(conn) do
