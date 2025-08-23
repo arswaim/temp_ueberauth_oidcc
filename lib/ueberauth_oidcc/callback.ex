@@ -29,6 +29,7 @@ defmodule UeberauthOidcc.Callback do
           | {:error, Plug.Conn.t(), term}
   def handle_callback(opts, conn) do
     IO.inspect(opts, label: "oidcc handle_callback opts")
+
     opts =
       Config.default()
       |> Map.merge(Map.new(opts))
@@ -94,21 +95,27 @@ defmodule UeberauthOidcc.Callback do
   defp apply_forwarded_headers_to_url(uri, conn) do
     parsed_uri = URI.parse(uri)
 
+    authority = get_host_header(conn) || parsed_uri.authority
+
+    [authority, uri_port] =
+      if String.contains?(authority, ":"),
+        do: String.split(authority, ":"),
+        else: [authority, to_string(parsed_uri.port)]
+
+    port = get_req_header(conn, "x-forwarded-port") || uri_port
+
     scheme =
       cond do
         scheme = get_forwarded_proto_header(conn) -> scheme
         true -> parsed_uri.scheme
       end
 
-    authority = get_host_header(conn) || parsed_uri.authority
-
-    port = get_req_header(conn, "x-forwarded-port") || parsed_uri.port
-
     %URI{parsed_uri | scheme: scheme, authority: authority, port: port} |> to_string()
   end
 
   defp get_forwarded_proto_header(conn) do
     IO.puts("Trying to get the x-forwarded-proto")
+
     conn
     |> get_req_header("x-forwarded-proto")
     |> IO.inspect(label: "x-forwarded-proto from the conn (oidcc)")
@@ -117,6 +124,7 @@ defmodule UeberauthOidcc.Callback do
 
   defp get_host_header(conn) do
     IO.puts("Trying to get x-forwarded-host")
+
     case get_req_header(conn, "x-forwarded-host") do
       [] ->
         get_req_header(conn, "host")
@@ -126,9 +134,6 @@ defmodule UeberauthOidcc.Callback do
         host
     end
   end
-
-  defp encode_query([]), do: nil
-  defp encode_query(query_params), do: URI.encode_query(query_params)
 
   defp claims_from_params(%{"code" => _code} = params, client_context, _opts) do
     case validate_iss_param(Map.get(params, "iss"), client_context) do
@@ -263,6 +268,7 @@ defmodule UeberauthOidcc.Callback do
   defp validate_redirect_uri(uri, conn) do
     # generate the current URL but without the query string parameters
     IO.inspect(conn, label: "the conn in validate_redirect_uri")
+
     case Plug.Conn.request_url(%{conn | query_string: ""}) do
       ^uri ->
         :ok
