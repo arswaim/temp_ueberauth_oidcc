@@ -73,8 +73,8 @@ defmodule UeberauthOidcc.Callback do
       apply_forwarded_headers_to_url(Map.get(session, :redirect_uri, :any), conn)
 
     with :ok <- validate_response_mode(Map.get(session, :response_mode, :any), conn),
-          # :ok <- validate_redirect_uri(Map.get(session, :redirect_uri, :any), conn),
-         :ok <- validate_redirect_uri(forwarded_redirect_uri, conn),
+          :ok <- validate_redirect_uri(Map.get(session, :redirect_uri, :any), conn),
+        #  :ok <- validate_redirect_uri(forwarded_redirect_uri, conn),
          :ok <- validate_issuer(Map.get(session, :issuer, :any), opts.issuer),
          {:ok, client_context, opts} <- client_context(opts, provider_overrides),
          {:ok, %{"code" => code} = claims} <-
