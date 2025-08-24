@@ -28,8 +28,6 @@ defmodule UeberauthOidcc.Callback do
            }}
           | {:error, Plug.Conn.t(), term}
   def handle_callback(opts, conn) do
-    # IO.inspect(opts, label: "oidcc handle_callback opts")
-
     opts =
       Config.default()
       |> Map.merge(Map.new(opts))
@@ -62,17 +60,8 @@ defmodule UeberauthOidcc.Callback do
 
     provider_overrides = Map.take(opts, [:token_endpoint])
 
-    IO.puts("Full URL would be:")
-    IO.inspect(apply_forwarded_headers_to_url(Map.get(session, :redirect_uri, :any), conn))
-    IO.puts("plain url is")
-    IO.inspect(Map.get(session, :redirect_uri, :any))
-
-    # forwarded_redirect_uri =
-    #   apply_forwarded_headers_to_url(Map.get(session, :redirect_uri, :any), conn)
-
     with :ok <- validate_response_mode(Map.get(session, :response_mode, :any), conn),
-          :ok <- validate_redirect_uri(Map.get(session, :redirect_uri, :any), conn),
-        #  :ok <- validate_redirect_uri(forwarded_redirect_uri, conn),
+         :ok <- validate_redirect_uri(Map.get(session, :redirect_uri, :any), conn),
          :ok <- validate_issuer(Map.get(session, :issuer, :any), opts.issuer),
          {:ok, client_context, opts} <- client_context(opts, provider_overrides),
          {:ok, %{"code" => code} = claims} <-
@@ -99,28 +88,18 @@ defmodule UeberauthOidcc.Callback do
   defp apply_forwarded_headers_to_url(uri, conn) do
     parsed_uri = URI.parse(uri)
 
-    host = get_host_header(conn) || parsed_uri.host
+    [uri_host, uri_port] =
+      if String.contains?(parsed_uri.host, ":"),
+        do: String.split(parsed_uri.host, ":"),
+        else: [parsed_uri.host, to_string(parsed_uri.port)]
 
-    [host, uri_port] =
-      if String.contains?(host, ":"),
-        do: String.split(host, ":"),
-        else: [host, parsed_uri.port]
+    host = get_forwarded_host_header(conn) || uri_host
 
     port = String.to_integer(get_forwarded_port_header(conn) || uri_port)
 
-    scheme =
-      cond do
-        scheme = get_forwarded_proto_header(conn) -> scheme
-        true -> parsed_uri.scheme
-      end
+    scheme = get_forwarded_proto_header(conn) || parsed_uri.scheme
 
-    %URI{
-      host: host,
-      port: port,
-      path: parsed_uri.path,
-      query: parsed_uri.query,
-      scheme: scheme
-    }
+    %URI{parsed_uri | host: host, port: port, scheme: scheme}
     |> to_string()
   end
 
@@ -131,24 +110,14 @@ defmodule UeberauthOidcc.Callback do
   end
 
   defp get_forwarded_proto_header(conn) do
-    IO.puts("Trying to get the x-forwarded-proto")
-
     conn
     |> get_req_header("x-forwarded-proto")
     |> List.first()
   end
 
-  defp get_host_header(conn) do
-    IO.puts("Trying to get x-forwarded-host")
-
-    case get_req_header(conn, "x-forwarded-host") do
-      [] ->
-        get_req_header(conn, "host")
-        |> List.first()
-
-      [host | _] ->
-        host
-    end
+  defp get_forwarded_host_header(conn) do
+    get_req_header(conn, "x-forwarded-host")
+    |> List.first()
   end
 
   defp claims_from_params(%{"code" => _code} = params, client_context, _opts) do
@@ -283,18 +252,12 @@ defmodule UeberauthOidcc.Callback do
 
   defp validate_redirect_uri(uri, conn) do
     # generate the current URL but without the query string parameters
-    # IO.inspect(conn, label: "the conn in validate_redirect_uri")
-    IO.inspect(get_forwarded_proto_header(conn), label: "forwarded proto from conn")
-
-    IO.inspect(uri, label: "the url we're comparing to")
-    IO.inspect(Plug.Conn.request_url(%{conn | query_string: ""}), label: "the conn url")
-
+    # and apply `x-forwarded-*` headers, if any
     case apply_forwarded_headers_to_url(Plug.Conn.request_url(%{conn | query_string: ""}), conn) do
       ^uri ->
         :ok
 
       actual_uri ->
-        IO.puts("Validating the redirect URI failed.")
         {:error, {:invalid_redirect_uri, actual_uri}}
     end
   end

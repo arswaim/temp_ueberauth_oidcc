@@ -544,6 +544,26 @@ defmodule Ueberauth.Strategy.OidccTest do
              } = error
     end
 
+    test "Apply `x-forwarded-*` headers to redirect URI", %{conn: conn} do
+      # options = @default_options ++ [redirect_uri: "https://wwww.www.com"]
+      conn =
+        run_request_and_callback(conn,
+          req_headers: [
+            {"x-forwarded-port", "200"},
+            {"x-forwarded-proto", "https"},
+            {"x-forwarded-host", "www.other.com"}
+          ]
+        )
+
+      [error | _] = conn.assigns.ueberauth_failure.errors
+
+      assert %Ueberauth.Failure.Error{
+               message_key: "redirect_uri",
+               message:
+                 "Redirected to the wrong URI: https://www.other.com:200/auth/provider/callback"
+             } = error
+    end
+
     test "Handle callback from provider who returns too many scopes", %{conn: conn} do
       options =
         Keyword.merge(@default_options,
@@ -738,6 +758,8 @@ defmodule Ueberauth.Strategy.OidccTest do
 
     other_params = Keyword.get(opts, :url_params, %{})
 
+    req_headers = Keyword.get(opts, :req_headers, [])
+
     params =
       code_opt
       |> Map.put("state", state)
@@ -748,6 +770,7 @@ defmodule Ueberauth.Strategy.OidccTest do
       |> conn(callback_path, params)
       |> Map.put(:secret_key_base, conn_with_cookies.secret_key_base)
       |> Map.put(:req_cookies, req_cookies)
+      |> Plug.Conn.prepend_req_headers(req_headers)
       |> Ueberauth.run_callback(:provider, {Strategy, oidcc_options})
 
     if opts[:return_request_conn] do
