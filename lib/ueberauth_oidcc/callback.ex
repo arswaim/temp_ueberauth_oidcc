@@ -28,7 +28,7 @@ defmodule UeberauthOidcc.Callback do
            }}
           | {:error, Plug.Conn.t(), term}
   def handle_callback(opts, conn) do
-    IO.inspect(opts, label: "oidcc handle_callback opts")
+    # IO.inspect(opts, label: "oidcc handle_callback opts")
 
     opts =
       Config.default()
@@ -36,8 +36,6 @@ defmodule UeberauthOidcc.Callback do
       |> opts_with_refresh()
       |> Map.put_new(:callback_path, callback_path(conn))
       |> Map.put_new(:redirect_uri, callback_url(conn))
-
-    IO.inspect(opts, label: "oidc handle_callback opts")
 
     session = Session.get(conn, opts)
     conn = Session.delete(conn, opts)
@@ -69,8 +67,8 @@ defmodule UeberauthOidcc.Callback do
     IO.puts("plain url is")
     IO.inspect(Map.get(session, :redirect_uri, :any))
 
-    forwarded_redirect_uri =
-      apply_forwarded_headers_to_url(Map.get(session, :redirect_uri, :any), conn)
+    # forwarded_redirect_uri =
+    #   apply_forwarded_headers_to_url(Map.get(session, :redirect_uri, :any), conn)
 
     with :ok <- validate_response_mode(Map.get(session, :response_mode, :any), conn),
           :ok <- validate_redirect_uri(Map.get(session, :redirect_uri, :any), conn),
@@ -137,7 +135,6 @@ defmodule UeberauthOidcc.Callback do
 
     conn
     |> get_req_header("x-forwarded-proto")
-    |> IO.inspect(label: "x-forwarded-proto from the conn (oidcc)")
     |> List.first()
   end
 
@@ -286,7 +283,7 @@ defmodule UeberauthOidcc.Callback do
 
   defp validate_redirect_uri(uri, conn) do
     # generate the current URL but without the query string parameters
-    IO.inspect(conn, label: "the conn in validate_redirect_uri")
+    # IO.inspect(conn, label: "the conn in validate_redirect_uri")
     IO.inspect(get_forwarded_proto_header(conn), label: "forwarded proto from conn")
 
     IO.inspect(uri, label: "the url we're comparing to")
